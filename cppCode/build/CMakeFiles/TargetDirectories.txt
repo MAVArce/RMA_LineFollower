@@ -1,0 +1,7 @@
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/cppremoteapi.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/edit_cache.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/rebuild_cache.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/list_install_components.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/install.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/install/local.dir
+/home/ribeiro/Documents/RMA_LineFollower/cppCode/build/CMakeFiles/install/strip.dir

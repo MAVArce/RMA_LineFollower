@@ -1,0 +1,5 @@
+# ninja log v5
+0	82	1657841604452526225	CMakeFiles/cppremoteapi.dir/remoteApi/extApiPlatform.c.o	419347aaef5cc479
+0	281	1657841604656526233	CMakeFiles/cppremoteapi.dir/main.cpp.o	32cb5b10867191c7
+0	315	1657841604692526235	CMakeFiles/cppremoteapi.dir/remoteApi/extApi.c.o	441de597265bd61d
+315	387	1657841604760526238	cppremoteapi	d737b207fd4c775d
