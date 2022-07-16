@@ -10,6 +10,8 @@ Control::Control(){
 void Control::updateVelocities(float dist, float angle, float &vLeft, float &vRight, float dt){
     float error = angle;
 
+    dt /= 1000;
+
     _iError += error * dt;
 
     if(_iError < -_iLimit){

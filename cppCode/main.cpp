@@ -55,22 +55,14 @@ int main(int argc, char **argv)
     cout << "Servidor conectado!" << std::endl;
 
     int robotHandle = 0;
+    int leftMotorHandle = 0;
+    int rightMotorHandle = 0;
+    
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX", (simxInt *)&robotHandle, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok){
         cout << "Robô nao encontrado!" << std::endl;
     } else {
         cout << "Conectado ao robô!" << std::endl;
     }
-
-    // simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
-    simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
-    simxFloat angle[3] = {0.0, 0.0, 0.0};
-    simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
-    simxSetObjectOrientation(clientID, robotHandle, -1, angle, (simxInt)simx_opmode_oneshot);
-
-    int leftMotorHandle = 0;
-    int rightMotorHandle = 0;
-    int cameraLinhaHandler = 0;
-    int cameraFrontalHandler = 0;
 
     // inicialização dos motores
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/leftMotor", (simxInt *)&leftMotorHandle, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok){
@@ -85,6 +77,17 @@ int main(int argc, char **argv)
         cout << "Conectado ao motor direito!" << std::endl;
     }
 
+    // simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
+    simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
+    simxFloat angle[3] = {0.0, 0.0, 0.0};
+    simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
+    simxSetObjectOrientation(clientID, robotHandle, -1, angle, (simxInt)simx_opmode_oneshot);
+    simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)0, simx_opmode_streaming);
+    simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)0, simx_opmode_streaming);
+
+    int cameraLinhaHandler = 0;
+    int cameraFrontalHandler = 0;
+
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/CameraLinha", (simxInt *)&cameraLinhaHandler, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok)
         cout << "Handle da camera de linha nao encontrado!" << std::endl;
     else
@@ -97,8 +100,6 @@ int main(int argc, char **argv)
 
     Control ctrl;
 
-    float vLeft = 0;
-    float vRight = 0;
     cv::namedWindow("CameraLinha", cv::WINDOW_AUTOSIZE );
     cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE );
     cv::Mat image;
@@ -107,18 +108,30 @@ int main(int argc, char **argv)
     simxInt *resolutionFrontal = (simxInt*)calloc(2,sizeof(simxInt));
     simxUChar *imageFrontalResult = nullptr;
 
+    int last_sim_time = 0;
+    int curr_sim_time = 0;
+    int dt = 0;
+
+    float vLeft = 0;
+    float vRight = 0;
+
     simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
     simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
 
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
-        
-        // ctrl.updateVelocities(0.0, 0.0, vLeft, vRight);
-        vLeft = 0.0;
-        vRight = 0.0;
-        // atualiza velocidades dos motores
-        simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
-        simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
+        curr_sim_time = (int)simxGetLastCmdTime(clientID);
+        dt = curr_sim_time - last_sim_time;
+        last_sim_time = curr_sim_time;
+
+        if(dt != 0){
+            // ctrl.updateVelocities(0.0, 0.0, vLeft, vRight, dt);
+
+            // atualiza velocidades dos motores
+            simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
+            simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
+        }
+
         simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
         
         // espera um pouco antes de reiniciar a leitura dos sensores
@@ -138,7 +151,7 @@ int main(int argc, char **argv)
             cv::imshow("CameraFrontal", my_mat2);
         }
         // Press  ESC on keyboard to exit
-        char c = (char)cv::waitKey(5);
+        char c = (char)cv::waitKey(15);
         if (c == 27)
             break;
     }
