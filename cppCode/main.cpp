@@ -30,6 +30,7 @@ extern "C"
 #include <cmath>
 #include <opencv2/opencv.hpp>
 
+#include "include/vision.hpp"
 #include "include/control.hpp"
 #include "include/colorSearch.hpp"
 
@@ -39,7 +40,7 @@ int main(int argc, char **argv) {
     constexpr double pi = 3.14159265358979323846;
     
     int scene = 1;
-    string serverIP = "localhost";
+    string serverIP = "127.0.0.1";
 
     if(argc > 2){
         try{
@@ -130,16 +131,13 @@ int main(int argc, char **argv) {
     else
         cout << "Conectado a camera de Frontal!" << std::endl;
 
+    Vision visionCtrl = Vision(clientID, cameraLinhaHandler, cameraFrontalHandler);
     Actuator actuator = Actuator(clientID, leftMotorHandle, rightMotorHandle);
-    ColorSearch colorSearch = ColorSearch(clientID, cameraFrontalHandler, robotHandle);
+    ColorSearch colorSearch = ColorSearch(clientID, robotHandle, &visionCtrl);
 
     cv::namedWindow("CameraLinha", cv::WINDOW_AUTOSIZE );
     cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE );
     cv::Mat image;
-    simxInt *resolutionLinha = (simxInt*)calloc(2,sizeof(simxInt));
-    simxUChar *imageLinhaResult = nullptr;
-    simxInt *resolutionFrontal = (simxInt*)calloc(2,sizeof(simxInt));
-    simxUChar *imageFrontalResult = nullptr;
 
     int last_sim_time = 0;
     int curr_sim_time = 0;
@@ -156,10 +154,7 @@ int main(int argc, char **argv) {
     float vRight = 0;
     float angle, dist;
 
-    simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
-    simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
-
-    colorSearch.Calibrate(&actuator);
+    // colorSearch.Calibrate(&actuator);
 
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
@@ -167,111 +162,90 @@ int main(int argc, char **argv) {
         dt = curr_sim_time - last_sim_time;
         last_sim_time = curr_sim_time;
 
-        // std::cout << "getting image: " << std::endl;
-        simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
-
+        cv::Mat linhaImg = visionCtrl.getImageLinha();
         if(dt == 0){
             extApi_sleepMs(1);
             continue;   
         }
 
         // espera um pouco antes de reiniciar a leitura dos sensores
-        // extApi_sleepMs(5);
-        if(resolutionLinha[0] > 0){
-            cv::Mat grey(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
-            cv::Mat my_mat(resolutionLinha[1],resolutionLinha[0],CV_8UC3,&imageLinhaResult[0]);
-            cv::Mat my_mat2 = my_mat.clone();
-            cv::flip(my_mat2, my_mat2, 0);
+        cv::Mat grey, gauss, thres;
+        cv::cvtColor(linhaImg, grey, cv::COLOR_RGB2GRAY);
+        cv::GaussianBlur(grey, gauss, cv::Size(5,5), 0, 0, 0);
+        cv::threshold(gauss, thres, 60, 255, cv::THRESH_BINARY_INV);
 
-            cv::cvtColor(my_mat2, grey, cv::COLOR_RGB2GRAY);
+        // cv::imshow("CameraLinha", linhaImg);
+        // cv::imshow("CameraLinha gauss", gauss);
+        // cv::imshow("CameraLinha thres", thres);
 
-            cv::Mat gauss(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
-            cv::Mat thres(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
-            cv::GaussianBlur(grey, gauss, cv::Size(5,5), 0, 0, 0);
-            cv::threshold(gauss, thres, 60, 255, cv::THRESH_BINARY_INV);
+        vector<vector<cv::Point> > contours;
+        vector<cv::Vec4i> hierarchy;
+        cv::findContours(thres, contours, hierarchy, 1, cv::CHAIN_APPROX_NONE);
 
-            vector<vector<cv::Point> > contours;
-            vector<cv::Vec4i> hierarchy;
-            cv::findContours(thres, contours, hierarchy, 1, cv::CHAIN_APPROX_NONE);
-
-            int largest_contour_index = -1;
-            double largest_area = 0;
-            for (int i = 0; i< contours.size(); i++) // iterate through each contour. 
-            {
-                double a = cv::contourArea(contours[i], false);  //  Find the area of contour
-                if (a>largest_area){
-                    largest_area = a;
-                    largest_contour_index = i;                //Store the index of largest contour
-                }
-
+        int largest_contour_index = -1;
+        double largest_area = 0;
+        for (int i = 0; i< (int)contours.size(); i++) // iterate through each contour. 
+        {
+            double a = cv::contourArea(contours[i], false);  //  Find the area of contour
+            if (a>largest_area){
+                largest_area = a;
+                largest_contour_index = i;                //Store the index of largest contour
             }
 
-            if(largest_contour_index >= 0)
-            {
-                drawContours( my_mat2, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
+        }
 
-                cv::Vec4f line4f;
-                fitLine(contours[largest_contour_index], line4f, cv::DIST_L2, 0, 0.01, 0.01);
-                cv::Point pt1;
-                cv::Point pt2;
+        if(largest_contour_index >= 0)
+        {
+            drawContours(linhaImg, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
 
-                int bottomx = int(((resolutionLinha[1] - line4f[3]) * line4f[0] / line4f[1]) + line4f[2]);
+            cv::Vec4f line4f;
+            fitLine(contours[largest_contour_index], line4f, cv::DIST_L2, 0, 0.01, 0.01);
+            cv::Point pt1;
+            cv::Point pt2;
 
-                if(abs(line4f[0]) > 0.01){
-                    int lefty = int((-line4f[2]*line4f[1]/line4f[0]) + line4f[3]); // -x1 * a + y1
-                    int righty = int(((resolutionLinha[0]-line4f[2])*line4f[1]/line4f[0])+line4f[3]); // (x2 - x1) * a + y1
-                    pt1 = cv::Point(resolutionLinha[0]-1,righty);
-                    pt2 = cv::Point(0,lefty);
-                    angle = atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+            int bottomx = int(((linhaImg.rows - line4f[3]) * line4f[0] / line4f[1]) + line4f[2]);
 
-                    if(angle < -pi/2){
-                        angle += pi/2;
-                    } else if (angle > pi/2){
-                        angle -= pi/2;
-                    }
-                } else {
-                    int topx = int(- (line4f[3] * line4f[0] / line4f[1]) + line4f[2]);
-                    
-                    pt1 = cv::Point(bottomx, resolutionLinha[1]-1);
-                    pt2 = cv::Point(topx, 0);
-                    angle = 0.0f;
+            if(abs(line4f[0]) > 0.01){
+                int lefty = int((-line4f[2]*line4f[1]/line4f[0]) + line4f[3]); // -x1 * a + y1
+                int righty = int(((linhaImg.cols-line4f[2])*line4f[1]/line4f[0])+line4f[3]); // (x2 - x1) * a + y1
+                pt1 = cv::Point(linhaImg.cols-1,righty);
+                pt2 = cv::Point(0,lefty);
+                angle = atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+
+                if(angle < -pi/2){
+                    angle += pi/2;
+                } else if (angle > pi/2){
+                    angle -= pi/2;
                 }
-
-                dist = isnan(bottomx)? 0.0 : ((resolutionLinha[0] - 1) / 2 - bottomx);
-                cv::line(my_mat2, pt1, pt2, cv::Scalar(0,255,0), 2);
-
+            } else {
+                int topx = int(- (line4f[3] * line4f[0] / line4f[1]) + line4f[2]);
+                
+                pt1 = cv::Point(bottomx, linhaImg.rows-1);
+                pt2 = cv::Point(topx, 0);
+                angle = 0.0f;
             }
-            cv::imshow("CameraLinha", my_mat2);
-            // cv::imshow("Threshold", thres);
+
+            dist = isnan(bottomx)? 0.0 : ((linhaImg.cols - 1) / 2 - bottomx);
+            cv::line(linhaImg, pt1, pt2, cv::Scalar(0,255,0), 2);
+
         }
+        cv::imshow("CameraLinha", linhaImg);
+        
+        vLeft = v0;
+        vRight = v0;
 
-        if(dt != 0){
-            vLeft = v0;
-            vRight = v0;
+        std::cout << "Distancia: " << dist << std::endl;
+        distCtrl.updateVelocities(-dist, vLeft, vRight, dt);
+        std::cout << "Angulo: " << angle << std::endl;
+        angleCtrl.updateVelocities(angle, vLeft, vRight, dt);
+        std::cout << "VLeft: " << vLeft << std::endl;
+        std::cout << "VRight: " << vRight << std::endl;
 
-            cout << "Distancia: " << dist << endl;
-            distCtrl.updateVelocities(-dist, vLeft, vRight, dt);
-            cout << "Angulo: " << angle << endl;
-            angleCtrl.updateVelocities(angle, vLeft, vRight, dt);
-            cout << "VLeft: " << vLeft << endl;
-            cout << "VRight: " << vRight << endl;
-            cout << endl;
+        actuator.sendVelocities(vLeft, vRight);
 
-            // vLeft = 0;
-            // vRight = 0;
 
-            // atualiza velocidades dos motores
-            simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
-            simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
-        }
-
-        simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
-        if(resolutionFrontal[0] > 0){
-            cv::Mat my_mat2(resolutionFrontal[1],resolutionFrontal[0],CV_8UC3,&imageFrontalResult[0]);
-            cv::flip(my_mat2, my_mat2, 0);
-            cv::cvtColor(my_mat2, my_mat2, cv::COLOR_RGB2BGR);
-            cv::imshow("CameraFrontal", my_mat2);
-        }
+        cv::Mat frontalImg = visionCtrl.getImageFrontal();
+        cv::imshow("CameraFrontal", frontalImg);
         // Press  ESC on keyboard to exit
         char c = (char)cv::waitKey(15);
         if (c == 27)

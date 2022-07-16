@@ -26,6 +26,7 @@ set(SOURCES
     source/control.cpp
     source/colorSearch.cpp
     source/actuator.cpp
+    source/vision.cpp
 )
  
 set(HEADERS
@@ -38,6 +39,7 @@ set(HEADERS
     include/control.hpp
     include/colorSearch.hpp
     include/actuator.hpp
+    include/vision.hpp
 )
 include_directories("include/")
 include_directories("remoteApi/")

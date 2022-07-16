@@ -61,6 +61,9 @@ void Actuator::sendVelocities(float vLeft, float vRight){
     
     _lastVLeft = realVLeft;
     _lastVRight = realVRight;
+    std::cout << "actual VLeft: " << realVLeft << std::endl;
+    std::cout << "actual VRight: " << realVRight << std::endl;
+    std::cout << std::endl;
 
     simxSetJointTargetVelocity(_clientId, _leftHandler, (simxFloat)realVLeft, simx_opmode_streaming);
     simxSetJointTargetVelocity(_clientId, _rightHandler, (simxFloat)realVRight, simx_opmode_streaming);

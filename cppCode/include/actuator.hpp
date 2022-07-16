@@ -11,7 +11,7 @@ class Actuator {
         const float _deadZone = 0.4f;
         const float _velCoefA = 1.2f;
         const float _velCoefB = -0.1f;
-        const float _maxVelDiff = 0.01f;
+        const float _maxVelDiff = 0.05f;
 
         int _clientId; 
         int _leftHandler; 
