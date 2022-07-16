@@ -30,6 +30,7 @@ extern "C"
 #include <opencv2/opencv.hpp>
 
 #include "include/control.hpp"
+#include "include/colorSearch.hpp"
 
 using namespace std;
 
@@ -95,7 +96,8 @@ int main(int argc, char **argv)
     else
         cout << "Conectado a camera de Frontal!" << std::endl;
 
-    Control ctrl;
+    Control ctrl = Control(clientID, leftMotorHandle, rightMotorHandle);
+    ColorSearch colorSearch = ColorSearch(clientID, cameraFrontalHandler, robotHandle);
 
     float vLeft = 0;
     float vRight = 0;
@@ -110,6 +112,8 @@ int main(int argc, char **argv)
     simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
     simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
 
+    colorSearch.Calibrate(&ctrl);
+
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
         
@@ -119,6 +123,8 @@ int main(int argc, char **argv)
         // atualiza velocidades dos motores
         simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
         simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
+        // ctrl.sendVelocities(vLeft, vRight);
+
         simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
         
         // espera um pouco antes de reiniciar a leitura dos sensores

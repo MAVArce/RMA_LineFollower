@@ -24,6 +24,7 @@ set(SOURCES
     #remoteApi/extApiCustom.c
     remoteApi/extApiPlatform.c
     source/control.cpp
+    source/colorSearch.cpp
 )
  
 set(HEADERS
@@ -34,6 +35,7 @@ set(HEADERS
     include/v_repConst.h
     include/v_repLib.h
     include/control.hpp
+    include/colorSearch.hpp
 )
 include_directories("include/")
 include_directories("remoteApi/")
