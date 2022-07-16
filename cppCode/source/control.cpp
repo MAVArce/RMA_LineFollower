@@ -11,7 +11,7 @@ Control::Control(float kp, float ki, float kd){
 }
 
 void Control::updateVelocities(float error, float &vLeft, float &vRight, float dt){
-    // dt /= 1000;
+    dt /= 1000;
 
     _iError += error * dt;
 
@@ -28,7 +28,7 @@ void Control::updateVelocities(float error, float &vLeft, float &vRight, float d
     float iTerm = (_ki * _iError);
 
     float controlTerms = pTerm + dTerm + iTerm;
-    // std::cout << pTerm << " - " << dTerm << " - " << iTerm << std::endl;
+    std::cout << pTerm << " - " << dTerm << " - " << iTerm << std::endl;
 
     vLeft += controlTerms;
     vRight -= controlTerms;

@@ -34,16 +34,29 @@ extern "C"
 
 using namespace std;
 
-int main(int argc, char **argv)
-{
-    string serverIP;
+int main(int argc, char **argv) {
+    constexpr double pi = 3.14159265358979323846;
+    
+    int scene = 1;
+    string serverIP = "localhost";
+
+    if(argc > 2){
+        try{
+            scene = stoi(string(argv[2]));
+
+            if(scene != 2){
+                scene = 1;
+            }
+
+        } catch(exception &err){
+            cout << "Escreva uma cena válida (1 ou 2)." << endl;
+            cout << "Considerando cena padrão" << endl;
+        }
+    }
 
     if (argc > 1) {
         char *ip = argv[1];
         serverIP = string(ip);
-    }
-    else {
-        serverIP = "127.0.0.1";
     }
 
     int serverPort = 19999;
@@ -78,9 +91,26 @@ int main(int argc, char **argv)
         cout << "Conectado ao motor direito!" << std::endl;
     }
 
-    simxFloat pos[3] = {-1.70, 1.0, 0.1388}; //Initial pose
-    // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
-    simxFloat ang[3] = {0.0, 0.0, 0.0};
+    simxFloat pos[3];
+    simxFloat ang[3];
+
+    if(scene == 1){
+        pos[0] = -1.7;
+        pos[1] = 1.0;
+        pos[2] = 0.1388;
+        ang[0] = 0.0;
+        ang[1] = 0.0;
+        ang[2] = 0.0;
+    } else if(scene == 2){
+        pos[0] = 14.8305;
+        pos[1] = 0.725;
+        pos[2] = 0.1388;
+        ang[0] = 0.0;
+        ang[1] = 0.0;
+        ang[2] = 55.0 * pi / 180;
+    }
+
+    // // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
     simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
     simxSetObjectOrientation(clientID, robotHandle, -1, ang, (simxInt)simx_opmode_oneshot);
     simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)0, simx_opmode_streaming);
@@ -99,7 +129,6 @@ int main(int argc, char **argv)
     else
         cout << "Conectado a camera de Frontal!" << std::endl;
 
-
     cv::namedWindow("CameraLinha", cv::WINDOW_AUTOSIZE );
     cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE );
     cv::Mat image;
@@ -112,13 +141,16 @@ int main(int argc, char **argv)
     int curr_sim_time = 0;
     int dt = 0;
 
-    Control distCtrl(0.001f, 0.0f, 0.0002f);
-    Control angleCtrl(0.5f, 0.0f, 0.2f);
-    float v0 = 1;
+    // Control distCtrl(0.001f, 0.0f, 0.0002f);
+    // Control angleCtrl(0.5f, 0.0f, 0.2f);
+    // float v0 = 1;
+
+    Control distCtrl(0.007f, 0.00001f, 0.0015f);
+    Control angleCtrl(0.7f, 0.0001f, 0.06f);
+    float v0 = 1.5;
     float vLeft = 0;
     float vRight = 0;
     float angle, dist;
-    constexpr double pi = 3.14159265358979323846;
 
     simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
     simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
@@ -199,7 +231,7 @@ int main(int argc, char **argv)
                     angle = 0.0f;
                 }
 
-                dist = ((resolutionLinha[0] - 1) / 2 - bottomx);
+                dist = isnan(bottomx)? 0.0 : ((resolutionLinha[0] - 1) / 2 - bottomx);
                 cv::line(my_mat2, pt1, pt2, cv::Scalar(0,255,0), 2);
 
             }
@@ -211,12 +243,12 @@ int main(int argc, char **argv)
             vLeft = v0;
             vRight = v0;
 
-            // cout << "Distancia: " << dist << endl;
-            // cout << "Angulo: " << angle << endl;
+            cout << "Distancia: " << dist << endl;
             distCtrl.updateVelocities(-dist, vLeft, vRight, dt);
+            cout << "Angulo: " << angle << endl;
             angleCtrl.updateVelocities(angle, vLeft, vRight, dt);
-            // cout << "VLeft: " << vLeft << endl;
-            // cout << "VRight: " << vRight << endl;
+            cout << "VLeft: " << vLeft << endl;
+            cout << "VRight: " << vRight << endl;
             cout << endl;
 
             // vLeft = 0;
