@@ -61,8 +61,8 @@ int main(int argc, char **argv)
         cout << "Conectado ao robô!" << std::endl;
     }
 
-    // simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
-    simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
+    simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
+    // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
     simxFloat angle[3] = {0.0, 0.0, 0.0};
     simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
     simxSetObjectOrientation(clientID, robotHandle, -1, angle, (simxInt)simx_opmode_oneshot);
@@ -124,9 +124,43 @@ int main(int argc, char **argv)
         // espera um pouco antes de reiniciar a leitura dos sensores
         // extApi_sleepMs(5);
         if(resolutionLinha[0] > 0){
+            cv::Mat grey(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
             cv::Mat my_mat(resolutionLinha[1],resolutionLinha[0],CV_8UC3,&imageLinhaResult[0]);
             cv::flip(my_mat, my_mat, 0);
-            cv::cvtColor(my_mat, my_mat, cv::COLOR_RGB2BGR);
+
+            cv::cvtColor(my_mat, grey, cv::COLOR_RGB2GRAY);
+
+            cv::Mat gauss(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
+            cv::Mat thres(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
+            cv::GaussianBlur(grey, gauss, cv::Size(5,5), 0, 0, 0);
+            cv::threshold(gauss, thres, 60, 255, cv::THRESH_BINARY_INV);
+
+            vector<vector<cv::Point> > contours;
+            vector<cv::Vec4i> hierarchy;
+            cv::findContours(thres, contours, hierarchy, 1, cv::CHAIN_APPROX_NONE);
+
+            int largest_contour_index = -1;
+            double largest_area = 0;
+            for (int i = 0; i< contours.size(); i++) // iterate through each contour. 
+            {
+                double a = cv::contourArea(contours[i], false);  //  Find the area of contour
+                if (a>largest_area){
+                    largest_area = a;
+                    largest_contour_index = i;                //Store the index of largest contour
+                }
+
+            }
+
+            if(largest_contour_index >= 0)
+            {
+                drawContours( my_mat, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
+
+                cv::Vec4f line4f;
+                fitLine(contours[largest_contour_index], line4f, cv::DIST_L2, 0, 0.01, 0.01);
+                int lefty = int((-line4f[2]*line4f[1]/line4f[0]) + line4f[3]);
+                int righty = int(((resolutionLinha[0]-line4f[2])*line4f[1]/line4f[0])+line4f[3]);
+                cv::line(my_mat, cv::Point(resolutionLinha[0]-1,righty), cv::Point(0, lefty), cv::Scalar(0,255,0), 2);
+            }
             cv::imshow("CameraLinha", my_mat);
         }
 
