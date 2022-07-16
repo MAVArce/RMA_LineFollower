@@ -61,7 +61,8 @@ int main(int argc, char **argv)
         cout << "Conectado ao robô!" << std::endl;
     }
 
-    simxFloat pos[3] = {-1.7195, 0.9750, 0.1388};
+    // simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
+    simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
     simxFloat angle[3] = {0.0, 0.0, 0.0};
     simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
     simxSetObjectOrientation(clientID, robotHandle, -1, angle, (simxInt)simx_opmode_oneshot);
@@ -69,6 +70,7 @@ int main(int argc, char **argv)
     int leftMotorHandle = 0;
     int rightMotorHandle = 0;
     int cameraLinhaHandler = 0;
+    int cameraFrontalHandler = 0;
 
     // inicialização dos motores
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/leftMotor", (simxInt *)&leftMotorHandle, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok){
@@ -88,16 +90,25 @@ int main(int argc, char **argv)
     else
         cout << "Conectado a camera de linha!" << std::endl;
 
+    if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/CameraFrontal", (simxInt *)&cameraFrontalHandler, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok)
+        cout << "Handle da camera de Frontal nao encontrado!" << std::endl;
+    else
+        cout << "Conectado a camera de Frontal!" << std::endl;
+
     Control ctrl;
 
     float vLeft = 0;
     float vRight = 0;
-    cv::namedWindow("LinhaCamera", cv::WINDOW_AUTOSIZE );
+    cv::namedWindow("CameraLinha", cv::WINDOW_AUTOSIZE );
+    cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE );
     cv::Mat image;
-    simxInt *resolution = (simxInt*)calloc(2,sizeof(simxInt));
-    simxUChar *imageResult = nullptr;
+    simxInt *resolutionLinha = (simxInt*)calloc(2,sizeof(simxInt));
+    simxUChar *imageLinhaResult = nullptr;
+    simxInt *resolutionFrontal = (simxInt*)calloc(2,sizeof(simxInt));
+    simxUChar *imageFrontalResult = nullptr;
 
-    simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolution, &imageResult, 0, simx_opmode_streaming);
+    simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
+    simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
 
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
@@ -108,13 +119,23 @@ int main(int argc, char **argv)
         // atualiza velocidades dos motores
         simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
         simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
-        simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolution, &imageResult, 0, simx_opmode_streaming);
+        simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
         
         // espera um pouco antes de reiniciar a leitura dos sensores
         // extApi_sleepMs(5);
-        if(resolution[0] > 0){
-            cv::Mat my_mat(resolution[0],resolution[1],CV_8UC3,&imageResult[0]);
-            cv::imshow("LinhaCamera", my_mat);
+        if(resolutionLinha[0] > 0){
+            cv::Mat my_mat(resolutionLinha[1],resolutionLinha[0],CV_8UC3,&imageLinhaResult[0]);
+            cv::flip(my_mat, my_mat, 0);
+            cv::cvtColor(my_mat, my_mat, cv::COLOR_RGB2BGR);
+            cv::imshow("CameraLinha", my_mat);
+        }
+
+        simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
+        if(resolutionFrontal[0] > 0){
+            cv::Mat my_mat2(resolutionFrontal[1],resolutionFrontal[0],CV_8UC3,&imageFrontalResult[0]);
+            cv::flip(my_mat2, my_mat2, 0);
+            cv::cvtColor(my_mat2, my_mat2, cv::COLOR_RGB2BGR);
+            cv::imshow("CameraFrontal", my_mat2);
         }
         // Press  ESC on keyboard to exit
         char c = (char)cv::waitKey(5);
