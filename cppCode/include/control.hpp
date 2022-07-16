@@ -7,7 +7,7 @@ class Control {
         void updateVelocities(float error, float &vLeft, float &vRight, float dt);
 
     private:
-        const float _iLimit = 0.2f;
+        const float _iLimit = 0.1f;
 
         float _kp;
         float _ki;
