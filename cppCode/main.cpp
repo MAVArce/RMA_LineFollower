@@ -27,6 +27,7 @@ extern "C"
 // #include "./include/v_repLib.h"
 #include <iostream>
 #include <string>
+#include <cmath>
 #include <opencv2/opencv.hpp>
 
 #include "include/control.hpp"
@@ -56,22 +57,14 @@ int main(int argc, char **argv)
     cout << "Servidor conectado!" << std::endl;
 
     int robotHandle = 0;
+    int leftMotorHandle = 0;
+    int rightMotorHandle = 0;
+    
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX", (simxInt *)&robotHandle, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok){
         cout << "Robô nao encontrado!" << std::endl;
     } else {
         cout << "Conectado ao robô!" << std::endl;
     }
-
-    simxFloat pos[3] = {-1.7195, 0.9750, 0.1388}; //Initial pose
-    // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
-    simxFloat angle[3] = {0.0, 0.0, 0.0};
-    simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
-    simxSetObjectOrientation(clientID, robotHandle, -1, angle, (simxInt)simx_opmode_oneshot);
-
-    int leftMotorHandle = 0;
-    int rightMotorHandle = 0;
-    int cameraLinhaHandler = 0;
-    int cameraFrontalHandler = 0;
 
     // inicialização dos motores
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/leftMotor", (simxInt *)&leftMotorHandle, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok){
@@ -86,6 +79,17 @@ int main(int argc, char **argv)
         cout << "Conectado ao motor direito!" << std::endl;
     }
 
+    simxFloat pos[3] = {-1.70, 1.0, 0.1388}; //Initial pose
+    // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
+    simxFloat ang[3] = {0.0, 0.0, 0.0};
+    simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
+    simxSetObjectOrientation(clientID, robotHandle, -1, ang, (simxInt)simx_opmode_oneshot);
+    simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)0, simx_opmode_streaming);
+    simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)0, simx_opmode_streaming);
+
+    int cameraLinhaHandler = 0;
+    int cameraFrontalHandler = 0;
+
     if (simxGetObjectHandle(clientID, (const simxChar *)"/PioneerP3DX/CameraLinha", (simxInt *)&cameraLinhaHandler, (simxInt)simx_opmode_oneshot_wait) != simx_return_ok)
         cout << "Handle da camera de linha nao encontrado!" << std::endl;
     else
@@ -96,11 +100,9 @@ int main(int argc, char **argv)
     else
         cout << "Conectado a camera de Frontal!" << std::endl;
 
-    Control ctrl = Control(clientID, leftMotorHandle, rightMotorHandle);
+    Actuator actuator = Actuator(clientID, leftMotorHandle, rightMotorHandle);
     ColorSearch colorSearch = ColorSearch(clientID, cameraFrontalHandler, robotHandle);
 
-    float vLeft = 0;
-    float vRight = 0;
     cv::namedWindow("CameraLinha", cv::WINDOW_AUTOSIZE );
     cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE );
     cv::Mat image;
@@ -109,32 +111,46 @@ int main(int argc, char **argv)
     simxInt *resolutionFrontal = (simxInt*)calloc(2,sizeof(simxInt));
     simxUChar *imageFrontalResult = nullptr;
 
+    int last_sim_time = 0;
+    int curr_sim_time = 0;
+    int dt = 0;
+
+    Control distCtrl(0.001f, 0.0f, 0.0002f);
+    Control angleCtrl(0.5f, 0.0f, 0.2f);
+    float v0 = 1;
+    float vLeft = 0;
+    float vRight = 0;
+    float angle, dist;
+    constexpr double pi = 3.14159265358979323846;
+
     simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
     simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
 
-    colorSearch.Calibrate(&ctrl);
+    colorSearch.Calibrate(&actuator);
 
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
-        
-        // ctrl.updateVelocities(0.0, 0.0, vLeft, vRight);
-        vLeft = 0.0;
-        vRight = 0.0;
-        // atualiza velocidades dos motores
-        simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
-        simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
-        // ctrl.sendVelocities(vLeft, vRight);
+        curr_sim_time = (int)simxGetLastCmdTime(clientID);
+        dt = curr_sim_time - last_sim_time;
+        last_sim_time = curr_sim_time;
 
+        // std::cout << "getting image: " << std::endl;
         simxGetVisionSensorImage(clientID, cameraLinhaHandler, resolutionLinha, &imageLinhaResult, 0, simx_opmode_streaming);
-        
+
+        if(dt == 0){
+            extApi_sleepMs(1);
+            continue;   
+        }
+
         // espera um pouco antes de reiniciar a leitura dos sensores
         // extApi_sleepMs(5);
         if(resolutionLinha[0] > 0){
             cv::Mat grey(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
             cv::Mat my_mat(resolutionLinha[1],resolutionLinha[0],CV_8UC3,&imageLinhaResult[0]);
-            cv::flip(my_mat, my_mat, 0);
+            cv::Mat my_mat2 = my_mat.clone();
+            cv::flip(my_mat2, my_mat2, 0);
 
-            cv::cvtColor(my_mat, grey, cv::COLOR_RGB2GRAY);
+            cv::cvtColor(my_mat2, grey, cv::COLOR_RGB2GRAY);
 
             cv::Mat gauss(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
             cv::Mat thres(resolutionLinha[1],resolutionLinha[0],CV_8UC1);
@@ -159,15 +175,61 @@ int main(int argc, char **argv)
 
             if(largest_contour_index >= 0)
             {
-                drawContours( my_mat, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
+                drawContours( my_mat2, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
 
                 cv::Vec4f line4f;
                 fitLine(contours[largest_contour_index], line4f, cv::DIST_L2, 0, 0.01, 0.01);
-                int lefty = int((-line4f[2]*line4f[1]/line4f[0]) + line4f[3]);
-                int righty = int(((resolutionLinha[0]-line4f[2])*line4f[1]/line4f[0])+line4f[3]);
-                cv::line(my_mat, cv::Point(resolutionLinha[0]-1,righty), cv::Point(0, lefty), cv::Scalar(0,255,0), 2);
+                cv::Point pt1;
+                cv::Point pt2;
+
+                int bottomx = int(((resolutionLinha[1] - line4f[3]) * line4f[0] / line4f[1]) + line4f[2]);
+
+                if(abs(line4f[0]) > 0.01){
+                    int lefty = int((-line4f[2]*line4f[1]/line4f[0]) + line4f[3]); // -x1 * a + y1
+                    int righty = int(((resolutionLinha[0]-line4f[2])*line4f[1]/line4f[0])+line4f[3]); // (x2 - x1) * a + y1
+                    pt1 = cv::Point(resolutionLinha[0]-1,righty);
+                    pt2 = cv::Point(0,lefty);
+                    angle = atan2(pt2.y - pt1.y, pt2.x - pt1.x);
+
+                    if(angle < -pi/2){
+                        angle += pi/2;
+                    } else if (angle > pi/2){
+                        angle -= pi/2;
+                    }
+                } else {
+                    int topx = int(- (line4f[3] * line4f[0] / line4f[1]) + line4f[2]);
+                    
+                    pt1 = cv::Point(bottomx, resolutionLinha[1]-1);
+                    pt2 = cv::Point(topx, 0);
+                    angle = 0.0f;
+                }
+
+                dist = ((resolutionLinha[0] - 1) / 2 - bottomx);
+                cv::line(my_mat2, pt1, pt2, cv::Scalar(0,255,0), 2);
+
             }
-            cv::imshow("CameraLinha", my_mat);
+            cv::imshow("CameraLinha", my_mat2);
+            // cv::imshow("Threshold", thres);
+        }
+
+        if(dt != 0){
+            vLeft = v0;
+            vRight = v0;
+
+            // cout << "Distancia: " << dist << endl;
+            // cout << "Angulo: " << angle << endl;
+            distCtrl.updateVelocities(-dist, vLeft, vRight, dt);
+            angleCtrl.updateVelocities(angle, vLeft, vRight, dt);
+            // cout << "VLeft: " << vLeft << endl;
+            // cout << "VRight: " << vRight << endl;
+            cout << endl;
+
+            // vLeft = 0;
+            // vRight = 0;
+
+            // atualiza velocidades dos motores
+            simxSetJointTargetVelocity(clientID, leftMotorHandle, (simxFloat)vLeft, simx_opmode_streaming);
+            simxSetJointTargetVelocity(clientID, rightMotorHandle, (simxFloat)vRight, simx_opmode_streaming);
         }
 
         simxGetVisionSensorImage(clientID, cameraFrontalHandler, resolutionFrontal, &imageFrontalResult, 0, simx_opmode_streaming);
@@ -178,7 +240,7 @@ int main(int argc, char **argv)
             cv::imshow("CameraFrontal", my_mat2);
         }
         // Press  ESC on keyboard to exit
-        char c = (char)cv::waitKey(5);
+        char c = (char)cv::waitKey(15);
         if (c == 27)
             break;
     }
