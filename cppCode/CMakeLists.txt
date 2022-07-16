@@ -1,7 +1,14 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.12)
 project(cppremoteapi)
 
 INCLUDE(FindPkgConfig)
+find_package( OpenCV REQUIRED )
+# include_directories( ${OpenCV_INCLUDE_DIRS} )
+
+message(STATUS "OpenCV library status:")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 IF(CMAKE_COMPILER_IS_GNUCC)
 SET(CMAKE_CXX_FLAGS
@@ -36,6 +43,6 @@ add_executable(cppremoteapi
                ${SOURCES}
 	       ${HEADERS})
 	       
-target_link_libraries (cppremoteapi ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (cppremoteapi ${CMAKE_THREAD_LIBS_INIT} ${OpenCV_LIBS})
 
 install(TARGETS cppremoteapi RUNTIME DESTINATION bin)
