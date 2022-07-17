@@ -5,6 +5,7 @@ class Actuator {
     public:        
         Actuator(int clientId, int leftHandler, int rightHandler);
         void sendVelocities(float vLeft, float vRight);
+        void stop();
 
     private:
         const float _maxVel = 1.0f;

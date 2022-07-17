@@ -7,11 +7,14 @@ extern "C"
 }
 
 #include <opencv2/opencv.hpp>
+#include <vector>
 class Vision {
     public:        
         Vision(int clientId, int linhaHandler, int frontalHandler);
         cv::Mat getImageLinha();
         cv::Mat getImageFrontal();
+        std::vector<cv::Point> getBiggestContour(cv::Mat image);
+        std::vector<std::vector<cv::Point>> getBiggestContours(cv::Mat image,int qtd);
 
     private:
         int _clientId; 

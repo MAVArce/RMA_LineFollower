@@ -3,6 +3,7 @@
 #include <limits>
 #include <cmath>
 #include <opencv2/opencv.hpp>
+#include <vector>
 
 
 extern "C"
@@ -54,6 +55,53 @@ cv::Mat Vision::getImageFrontal(){
     _applyNoise(_frontalInfo, &image);
 
     return image;
+}
+
+std::vector<cv::Point> Vision::getBiggestContour(cv::Mat image){
+    std::vector<std::vector<cv::Point>> lst = getBiggestContours(image, 1);
+    // std::cout << "lst size: " << lst.size() <<  ", area: " << cv::contourArea(lst[0], false) <<std::endl;
+
+    if(lst.empty())
+        return std::vector<cv::Point>();
+
+    return lst[0];
+}
+
+std::vector<std::vector<cv::Point>> Vision::getBiggestContours(cv::Mat image, int qtd){
+    std::vector<std::vector<cv::Point> > contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(image, contours, hierarchy, 1, cv::CHAIN_APPROX_NONE);
+
+    std::vector<int> largestIdx;
+    std::vector<double> largestArea;
+    // largestIdx.reserve(qtd); largestArea.reserve(qtd);
+
+    for(int i = 0; i < qtd; i++){
+        largestIdx.push_back(-1);
+        largestArea.push_back(0.0);
+    }
+
+    for (int i = 0; i< (int)contours.size(); i++) // iterate through each contour. 
+    {
+        double a = cv::contourArea(contours[i], false);  //  Find the area of contour
+        for(int j = 0; j < qtd; j++){
+            if (a > largestArea[j]){
+                for(int k = j+1; k < qtd; k++){
+                    largestIdx[k] = largestIdx[k-1];
+                    largestArea[k] = largestArea[k-1];
+                }
+                largestIdx[j] = i;
+                largestArea[j] = a;       
+                break;
+            }
+        }
+    }
+    std::vector<std::vector<cv::Point>> result;
+    for(int i = 0; i < qtd; i++){
+        if(largestIdx[i] != -1)
+            result.push_back(contours[largestIdx[i]]);
+    }
+    return result;
 }
 
 void Vision::_getCamResolution(camInfo *cam){

@@ -39,14 +39,14 @@ using namespace std;
 int main(int argc, char **argv) {
     constexpr double pi = 3.14159265358979323846;
     
-    int scene = 1;
+    int scene = 1; //1 - cena normal, 2 - pezinho, 3 - papeis coloridos
     string serverIP = "127.0.0.1";
 
     if(argc > 2){
         try{
             scene = stoi(string(argv[2]));
 
-            if(scene != 2){
+            if(scene != 2 && scene != 3){
                 scene = 1;
             }
 
@@ -110,6 +110,13 @@ int main(int argc, char **argv) {
         ang[0] = 0.0;
         ang[1] = 0.0;
         ang[2] = 55.0 * pi / 180;
+    } else if(scene == 3){
+        pos[0] = -1.613;
+        pos[1] =  1.016;
+        pos[2] = 0.1388;
+        ang[0] = 0.0;
+        ang[1] = 0.0;
+        ang[2] = -179.60 * pi / 180;
     }
 
     // // simxFloat pos[3] = {-0.1766, -0.4299, 0.1388}; //pezinho 
@@ -154,7 +161,10 @@ int main(int argc, char **argv) {
     float vRight = 0;
     float angle, dist;
 
-    // colorSearch.Calibrate(&actuator);
+    colorSearch.Calibrate(&actuator);
+
+    cv::Point ptLandmark;
+    int distLandmark;
 
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
@@ -178,28 +188,14 @@ int main(int argc, char **argv) {
         // cv::imshow("CameraLinha gauss", gauss);
         // cv::imshow("CameraLinha thres", thres);
 
-        vector<vector<cv::Point> > contours;
-        vector<cv::Vec4i> hierarchy;
-        cv::findContours(thres, contours, hierarchy, 1, cv::CHAIN_APPROX_NONE);
+        vector<cv::Point> contour = visionCtrl.getBiggestContour(thres);
 
-        int largest_contour_index = -1;
-        double largest_area = 0;
-        for (int i = 0; i< (int)contours.size(); i++) // iterate through each contour. 
+        if(!contour.empty())
         {
-            double a = cv::contourArea(contours[i], false);  //  Find the area of contour
-            if (a>largest_area){
-                largest_area = a;
-                largest_contour_index = i;                //Store the index of largest contour
-            }
-
-        }
-
-        if(largest_contour_index >= 0)
-        {
-            drawContours(linhaImg, contours, largest_contour_index, cv::Scalar(0,0,255), 2, cv::LINE_8, hierarchy, 0 );
+            drawContours(linhaImg, vector<vector<cv::Point> >(1,contour), -1, cv::Scalar(0,0,255), 2, cv::LINE_8);
 
             cv::Vec4f line4f;
-            fitLine(contours[largest_contour_index], line4f, cv::DIST_L2, 0, 0.01, 0.01);
+            fitLine(contour, line4f, cv::DIST_L2, 0, 0.01, 0.01);
             cv::Point pt1;
             cv::Point pt2;
 
@@ -240,12 +236,17 @@ int main(int argc, char **argv) {
         angleCtrl.updateVelocities(angle, vLeft, vRight, dt);
         std::cout << "VLeft: " << vLeft << std::endl;
         std::cout << "VRight: " << vRight << std::endl;
+        std::cout << std::endl;
 
         actuator.sendVelocities(vLeft, vRight);
 
 
         cv::Mat frontalImg = visionCtrl.getImageFrontal();
         cv::imshow("CameraFrontal", frontalImg);
+        // cv::Mat frontalImgCopy = frontalImg.clone();
+        // colorSearch.FindLandmark(&ptLandmark, &distLandmark, &frontalImgCopy);
+        // cv::imshow("CameraFrontal", frontalImgCopy);
+
         // Press  ESC on keyboard to exit
         char c = (char)cv::waitKey(15);
         if (c == 27)
