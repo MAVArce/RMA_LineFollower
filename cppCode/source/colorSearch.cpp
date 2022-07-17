@@ -3,7 +3,6 @@
 #include <limits>
 #include <cmath>     
 #include <opencv2/opencv.hpp>
-#include <numbers> // std::numbers
 
 
 extern "C"
@@ -90,7 +89,7 @@ void ColorSearch::_calibrateRed(){
 
 }
 
-void ColorSearch::Calibrate(Actuator *actuator){
+void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
     float originalAngle =  _getRobotDirection();
     _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
     // actuator->stop();
@@ -101,8 +100,26 @@ void ColorSearch::Calibrate(Actuator *actuator){
     _calibrateGreen();
     _calibrateRed();
 
+    FindLandmark(pt, dist);
+
     _RotateToAngle(originalAngle, actuator);
     // actuator->stop();
+}
+
+void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){
+    float angleStep = M_PI / 4;
+    float nextAngle = _angleSum(_getRobotDirection(), angleStep);
+    float angleToRotate = (2 * M_PI) - angleStep;
+
+    FindLandmark(pt, dist);
+
+    while(angleToRotate > 0 && pt->x == -1 && pt->y == -1){
+        _RotateToAngle(nextAngle, actuator);
+        nextAngle += angleStep;
+        angleToRotate -= angleStep;
+
+        FindLandmark(pt, dist);
+    }
 }
 
 void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
@@ -128,7 +145,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
         return;
 
     *pt = middlePoint;
-    *dist = (redCenter1.x - redCenter2.x) * (redCenter1.x - redCenter2.x) + (redCenter1.y - redCenter2.y) * (redCenter1.y - redCenter2.y);
+    *dist = sqrt((redCenter1.x - redCenter2.x) * (redCenter1.x - redCenter2.x) + (redCenter1.y - redCenter2.y) * (redCenter1.y - redCenter2.y));
 
     if(image != nullptr){
         cv::drawContours(*image, redContours, -1, cv::Scalar(0,0,0), 2, cv::LINE_8);
@@ -277,3 +294,4 @@ void ColorSearch::_RotateToAngle(float angle, Actuator *actuator){
 
     actuator->stop();
 }
+

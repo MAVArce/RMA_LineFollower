@@ -22,7 +22,6 @@ void Actuator::sendVelocities(float vLeft, float vRight){
     float realVLeft = std::abs(vLeft);
     float realVRight = std::abs(vRight);
     
-    
     if(realVLeft < _deadZone)
         realVLeft = 0.0;
     else
@@ -33,17 +32,14 @@ void Actuator::sendVelocities(float vLeft, float vRight){
     else
         realVRight = realVRight*_velCoefA + _velCoefB;
     
-    if(realVLeft > _maxVel)
-        realVLeft = _maxVel;
-
-    if(realVRight > _maxVel)
-        realVRight = _maxVel;
+    realVLeft = std::min(realVLeft, _maxVel);
+    realVRight = std::min(realVRight, _maxVel);
     
     if(vLeft < 0)
-        realVLeft = realVLeft*(-1.0);
+        realVLeft *= -1.0;
     
     if(vRight < 0)
-        realVRight = realVRight*(-1.0);
+        realVRight *= -1.0;
     
     
     float diffLeft = realVLeft - _lastVLeft;

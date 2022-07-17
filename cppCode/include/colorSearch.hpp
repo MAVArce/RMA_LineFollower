@@ -8,8 +8,9 @@ class ColorSearch {
     public:
         ColorSearch(int clientId, int robotHandler, Vision *visionCtrl);
 
-        void Calibrate(Actuator *actuator);
-        void FindLandmark(cv::Point *pt, int *dist, cv::Mat *image);
+        void Calibrate(Actuator *actuator, cv::Point *pt, int *dist);
+        void FindLandmark(cv::Point *pt, int *dist, cv::Mat *image = nullptr);
+        void SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist);
 
     private:
         struct Filter{

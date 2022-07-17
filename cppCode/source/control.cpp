@@ -22,14 +22,13 @@ void Control::updateVelocities(float error, float &vLeft, float &vRight, float d
         _iError = _iLimit;
     }
 
-    // std::cout << "Error: " << angle << std::endl;
-
     float pTerm = _kp * error;
-    float dTerm = _kd * (error - _lastError) / dt;
     float iTerm = (_ki * _iError);
+    float dTerm = _kd * (error - _lastError) / dt;
+    _lastError = error;
 
-    float controlTerms = pTerm + dTerm + iTerm;
-    std::cout << pTerm << " - " << dTerm << " - " << iTerm << std::endl;
+    float controlTerms = pTerm + iTerm + dTerm;
+    std::cout << pTerm << " - " << iTerm << " - " << dTerm << std::endl;
 
     vLeft += controlTerms;
     vRight -= controlTerms;
