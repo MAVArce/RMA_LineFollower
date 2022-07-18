@@ -109,7 +109,7 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
 }
 
 void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){
-    float angleStep = M_PI / 5;
+    float angleStep = M_PI / 7;
     float nextAngle = _angleSum(GetRobotDirection(), angleStep);
     float angleToRotate = (2 * M_PI) - angleStep;
 
@@ -128,11 +128,12 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     *pt = cv::Point(-1,-1);
     *dist = -1;
 
-    const int qtdContours = 10; 
+    const int qtdContours = 30; 
     std::vector<std::vector<cv::Point>> greenLandmark, redLandmark;
     std::vector<std::vector<cv::Point>> greenContours = detect(_greenFilter, qtdContours);
     std::vector<std::vector<cv::Point>> redContours = detect(_redFilterBot, _redFilterTop, 2*qtdContours);
     
+    // std::cout << "lens: " << greenContours.size() << ", " << redContours.size() << std::endl;
     if(greenContours.empty() || redContours.size() < 2)
         return;
 
