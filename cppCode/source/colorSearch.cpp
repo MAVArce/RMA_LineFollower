@@ -109,7 +109,7 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
 }
 
 void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){
-    float angleStep = M_PI / 4;
+    float angleStep = M_PI / 5;
     float nextAngle = _angleSum(GetRobotDirection(), angleStep);
     float angleToRotate = (2 * M_PI) - angleStep;
 
@@ -128,6 +128,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     *pt = cv::Point(-1,-1);
     *dist = -1;
 
+    std::cout  << "FindLandmark" << std::endl;
     const int qtdContours = 10; 
     std::vector<std::vector<cv::Point>> greenLandmark, redLandmark;
     std::vector<std::vector<cv::Point>> greenContours = detect(_greenFilter, qtdContours);
@@ -165,11 +166,12 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
                 if(middlePoint.x < greenRect.x || middlePoint.x > (greenRect.x + greenRect.width) ||
                     middlePoint.y < greenRect.y || middlePoint.y > (greenRect.y + greenRect.height))
                     continue;
-
+                    
                 foundLandmark = true;
             }
         }
     }
+    std::cout<< "middlePoint: " << middlePoint << ", greenRect: " << greenRect << std::endl;
     if(foundLandmark != true)
         return;
 
@@ -180,7 +182,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
         cv::circle(*image, redCenter1, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
         cv::circle(*image, redCenter2, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
         cv::circle(*image, middlePoint, 5, cv::Scalar( 255, 255, 0 ), cv::FILLED, cv::LINE_8 );
-        // cv::rectangle(*image, greenRect, cv::Scalar( 0, 255, 255), cv::FILLED, cv::LINE_8);
+        cv::rectangle(*image, greenRect, cv::Scalar( 0, 255, 255), cv::FILLED, cv::LINE_8);
     }
 }
 
@@ -279,7 +281,9 @@ int ColorSearch::_calculateValue(Filter *filter, int *valueToChange, int step, i
 
 float ColorSearch::GetRobotDirection(){
     simxFloat *eulerAngles = (simxFloat*)calloc(3, sizeof(simxFloat));
+    simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
     while(eulerAngles[0] == 0){
+        // std::cout << "GetRobotDirection loop" << std::endl;
         simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
         extApi_sleepMs(5);
     }
