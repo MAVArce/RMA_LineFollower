@@ -221,8 +221,24 @@ int main(int argc, char **argv) {
     colorSearch.Calibrate(&actuator, &startPtLandmark, &startDistLandmark);
     startOriLandmark = colorSearch.GetRobotDirection();
 
+    cout << "StartPtLandmark: " << startPtLandmark.x << " - " << startPtLandmark.y << endl;
+    cout << "StartDistLandmark: " << startDistLandmark << endl;
+
     initialSetup(clientID, robotHandle, leftMotorHandle, rightMotorHandle, 4);  
 
+    // while (true){
+    //     actuator.sendVelocities(0.4,-0.4);
+    //     cv::Mat frontalImg = visionCtrl.getImageFrontal();
+    //     cv::Mat frontalImgCopy = frontalImg.clone();
+    //     colorSearch.FindLandmark(&ptLandmark, &distLandmark, &frontalImgCopy);
+    //     cv::imshow("CameraFrontal", frontalImgCopy);
+
+    //     // Press  ESC on keyboard to exit
+    //     char c = (char)cv::waitKey(15);
+    //     if (c == 27)
+    //         break;
+    // }
+    
     // desvio e velocidade do robô
     while (simxGetConnectionId(clientID) != -1) {// enquanto a simulação estiver ativa 
         curr_sim_time = (int)simxGetLastCmdTime(clientID);
