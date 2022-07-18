@@ -74,6 +74,7 @@ std::vector<std::vector<cv::Point>> Vision::getBiggestContours(cv::Mat image, in
 
     std::vector<int> largestIdx;
     std::vector<double> largestArea;
+    double mimArea = 50;
     // largestIdx.reserve(qtd); largestArea.reserve(qtd);
 
     for(int i = 0; i < qtd; i++){
@@ -84,6 +85,9 @@ std::vector<std::vector<cv::Point>> Vision::getBiggestContours(cv::Mat image, in
     for (int i = 0; i< (int)contours.size(); i++) // iterate through each contour. 
     {
         double a = cv::contourArea(contours[i], false);  //  Find the area of contour
+        if(a < mimArea)
+            continue;
+
         for(int j = 0; j < qtd; j++){
             if (a > largestArea[j]){
                 for(int k = j+1; k < qtd; k++){
@@ -98,6 +102,9 @@ std::vector<std::vector<cv::Point>> Vision::getBiggestContours(cv::Mat image, in
     }
     std::vector<std::vector<cv::Point>> result;
     for(int i = 0; i < qtd; i++){
+        if(largestArea[i] == 0)
+            break;
+            
         if(largestIdx[i] != -1)
             result.push_back(contours[largestIdx[i]]);
     }

@@ -149,6 +149,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     for(int i = 0; i < redContours.size() && !foundLandmark; i++){        
         redM1 = cv::moments(redContours[i],true);
         redCenter1 = cv::Point(redM1.m10/redM1.m00, redM1.m01/redM1.m00);
+        // double areaRed1 = cv::contourArea()
         
         for(int j = 0; j < redContours.size() && !foundLandmark; j++){
             if(i == j)
@@ -163,10 +164,14 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
 
                 if(middlePoint.x < greenRect.x || middlePoint.x > (greenRect.x + greenRect.width) ||
                     middlePoint.y < greenRect.y || middlePoint.y > (greenRect.y + greenRect.height))
-                    foundLandmark = true;
+                    continue;
+
+                foundLandmark = true;
             }
         }
     }
+    if(foundLandmark != true)
+        return;
 
     *pt = middlePoint;
     *dist = sqrt((redCenter1.x - redCenter2.x) * (redCenter1.x - redCenter2.x) + (redCenter1.y - redCenter2.y) * (redCenter1.y - redCenter2.y));
@@ -174,7 +179,8 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     if(image != nullptr){
         cv::circle(*image, redCenter1, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
         cv::circle(*image, redCenter2, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
-        cv::circle(*image, middlePoint, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
+        cv::circle(*image, middlePoint, 5, cv::Scalar( 255, 255, 0 ), cv::FILLED, cv::LINE_8 );
+        // cv::rectangle(*image, greenRect, cv::Scalar( 0, 255, 255), cv::FILLED, cv::LINE_8);
     }
 }
 
