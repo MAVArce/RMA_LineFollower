@@ -131,6 +131,11 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     if(greenContours.empty() || redContours.empty() || redContours.size() < 2)
         return;
 
+    if(image != nullptr){
+        cv::drawContours(*image, redContours, -1, cv::Scalar(0,0,0), 2, cv::LINE_8);
+        cv::drawContours(*image, greenContours, -1, cv::Scalar(255,0,0), 2, cv::LINE_8);
+    }
+
     cv::Rect greenRect = cv::boundingRect(greenContours[0]);
 
     cv::Moments redM1 = cv::moments(redContours[0],true);
@@ -148,9 +153,6 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     *dist = sqrt((redCenter1.x - redCenter2.x) * (redCenter1.x - redCenter2.x) + (redCenter1.y - redCenter2.y) * (redCenter1.y - redCenter2.y));
 
     if(image != nullptr){
-        cv::drawContours(*image, redContours, -1, cv::Scalar(0,0,0), 2, cv::LINE_8);
-        cv::drawContours(*image, greenContours, -1, cv::Scalar(255,0,0), 2, cv::LINE_8);
-
         cv::circle(*image, redCenter1, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
         cv::circle(*image, redCenter2, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
         cv::circle(*image, middlePoint, 5, cv::Scalar( 0, 0, 0 ), cv::FILLED, cv::LINE_8 );
