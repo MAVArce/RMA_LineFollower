@@ -3,10 +3,11 @@
 #include <limits>
 #include <cmath>        // std::abs
 
-Control::Control(float kp, float ki, float kd){
+Control::Control(float kp, float ki, float kd, bool linear){
     _kp = kp;
     _ki = ki;
     _kd = kd;
+    _linear = linear;
     _iError = 0.0f;
     _lastError = 0.0f;
 }
@@ -28,8 +29,8 @@ void Control::updateVelocities(float error, float &vLeft, float &vRight, float d
     _lastError = error;
 
     float controlTerms = pTerm + iTerm + dTerm;
-    std::cout << pTerm << " - " << iTerm << " - " << dTerm << std::endl;
+    std::cout << controlTerms << " = " << pTerm << " + " << iTerm << " + " << dTerm << std::endl;
 
     vLeft += controlTerms;
-    vRight -= controlTerms;
+    vRight += _linear ? controlTerms : -controlTerms;
 }

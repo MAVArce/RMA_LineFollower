@@ -90,9 +90,8 @@ void ColorSearch::_calibrateRed(){
 }
 
 void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
-    float originalAngle =  _getRobotDirection();
-    _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
-    // actuator->stop();
+    float originalAngle = GetRobotDirection();
+    // _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
     
     cv::Mat imageOriginal = _visionCtrl->getImageFrontal();
     cv::Mat imageNew = _visionCtrl->getImageFrontal();
@@ -102,13 +101,13 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
 
     FindLandmark(pt, dist);
 
-    _RotateToAngle(originalAngle, actuator);
-    // actuator->stop();
+    _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
+    // _RotateToAngle(originalAngle, actuator);
 }
 
 void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){
     float angleStep = M_PI / 4;
-    float nextAngle = _angleSum(_getRobotDirection(), angleStep);
+    float nextAngle = _angleSum(GetRobotDirection(), angleStep);
     float angleToRotate = (2 * M_PI) - angleStep;
 
     FindLandmark(pt, dist);
@@ -250,7 +249,7 @@ int ColorSearch::_calculateValue(Filter *filter, int *valueToChange, int step, i
     return result;
 }
 
-float ColorSearch::_getRobotDirection(){
+float ColorSearch::GetRobotDirection(){
     simxFloat *eulerAngles = (simxFloat*)calloc(3, sizeof(simxFloat));
     simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
 
@@ -258,36 +257,46 @@ float ColorSearch::_getRobotDirection(){
     return (float)eulerAngles[2];
 }
 
-float ColorSearch::_angleDiff(float a, float b){
+float ColorSearch::AngleDiff(float a, float b){
     float diff = a - b;
-    if(diff < -(M_PI + 0.01))
-        diff += M_PI;
+    // if(diff < -M_PI){
+    //     diff += M_PI * 2;
+    // } else if(diff > M_PI){
+    //     diff -= M_PI * 2;
+    // }
+    if(diff < -M_PI)
+        diff = (diff + M_PI) * -1;
+    if(diff > M_PI)
+        diff = (diff - M_PI) * -1;
 
     return diff;
 }
 
 float ColorSearch::_angleSum(float a, float b){
     float sum = a + b;
-    if(sum < -(M_PI + 0.01))
-        sum += M_PI;
-    if(sum > (M_PI + 0.01))
-        sum -= M_PI;
+    if(sum < -M_PI)
+        sum = (sum + M_PI) * -1;
+    if(sum > M_PI)
+        sum = (sum - M_PI) * -1;
 
     return sum;
 }
 
 void ColorSearch::_RotateToAngle(float angle, Actuator *actuator){
     float error = M_PI;
-    float currAngle = _getRobotDirection();
-    // std::cout <<"_RotateToAngle: " << angle << std::endl;
+    float currAngle = GetRobotDirection();
+    // std::cout <<"Angle: " << angle << std::endl;
 
-    while(error > 0.05){        
-        currAngle = _getRobotDirection();
-        error = std::abs(_angleDiff(currAngle, angle));
+    while(abs(error) > 0.05){        
+        currAngle = GetRobotDirection();
+        // std::cout <<"CurrAngle: " << currAngle << std::endl;
+        error = AngleDiff(currAngle, angle);
 
         // std::cout<< "robot direction: " << currAngle << ", error: " << error << std::endl;
-        float vel = (error / M_PI)*0.6 + 0.4;
-        actuator->sendVelocities(-vel, vel);
+        float vel = (error)*0.6 + (error > 0 ? 0.4 : -0.4);
+        // std::cout << "vel: " << vel << " - error: " << error << std::endl;
+
+        actuator->sendVelocities(vel, -vel);
 
         cv::Mat image = _visionCtrl->getImageFrontal();
         cv::imshow("CameraFrontal", image);

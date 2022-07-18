@@ -11,6 +11,8 @@ class ColorSearch {
         void Calibrate(Actuator *actuator, cv::Point *pt, int *dist);
         void FindLandmark(cv::Point *pt, int *dist, cv::Mat *image = nullptr);
         void SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist);
+        float GetRobotDirection();
+        float AngleDiff(float a, float b);
 
     private:
         struct Filter{
@@ -26,9 +28,7 @@ class ColorSearch {
 
         Vision *_visionCtrl;
 
-        float _getRobotDirection();
         float _angleSum(float a, float b);
-        float _angleDiff(float a, float b);
 
         void _RotateToAngle(float angle, Actuator *actuator);
         int _calculateValue(Filter *filter, int *valueToChange, int step, int max, int min);        
