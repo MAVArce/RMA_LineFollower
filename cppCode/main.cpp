@@ -203,9 +203,9 @@ int main(int argc, char **argv) {
     Control distCtrl(0.008f, 0.00001f, 0.003f, false);
     Control angleCtrl(0.85f, 0.0001f, 0.2f, false);
 
-    Control lmOriCtrl(0.05f, 0.0001f, 0.01f, false);
-    Control lmPtCtrl(0.005f, 0.0001f, 0.001f, false);
-    Control lmDistCtrl(0.005f, 0.0001f, 0.001f, true);
+    Control lmOriCtrl(0.05f, 0.000f, 0.0f, false);
+    Control lmPtCtrl(0.005f, 0.000f, 0.0f, false);
+    Control lmDistCtrl(0.005f, 0.00f, 0.0f, true);
 
     float v0 = 1.5;
     float vLeft = 0;
@@ -301,22 +301,20 @@ int main(int argc, char **argv) {
             vLeft = v0;
             vRight = v0;
 
-            // float lmDist = (startDistLandmark - distLandmark);
+            float lmDist = (startDistLandmark - distLandmark);
             float oriDist = colorSearch.AngleDiff(colorSearch.oriLandmark, colorSearch.GetRobotDirection());
             float ptDist = (startPtLandmark.x - ptLandmark.x);
 
-            // lmDistCtrl.updateVelocities(-lmDist, vLeft, vRight, dt);
+            cout << "LmDist: " << lmDist << endl;
+            lmDistCtrl.updateVelocities(-lmDist, vLeft, vRight, dt);
             cout << "OriDist: " << oriDist << endl;
-            lmOriCtrl.updateVelocities(oriDist, vLeft, vRight, dt);
+            lmOriCtrl.updateVelocities(-oriDist, vLeft, vRight, dt);
             cout << "PtDist: " << ptDist << endl;
-            lmPtCtrl.updateVelocities(ptDist, vLeft, vRight, dt);
+            lmPtCtrl.updateVelocities(-ptDist, vLeft, vRight, dt);
 
-            std::cout << "VLeft: " << vLeft << std::endl;
-            std::cout << "VRight: " << vRight << std::endl;
-            std::cout << std::endl;
+            std::cout << "V: (" << vLeft << ", " << vRight << ")\n\n";
 
             cv::imshow("CameraFrontal", clone);
-            // while(true);
         }
 
         actuator.sendVelocities(vLeft, vRight);
