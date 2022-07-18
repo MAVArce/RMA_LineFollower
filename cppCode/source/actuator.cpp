@@ -18,7 +18,6 @@ Actuator::Actuator(int clientId, int leftHandler, int rightHandler){
 }
 
 void Actuator::sendVelocities(float vLeft, float vRight, bool printVelocities){
-
     float realVLeft = std::abs(vLeft);
     float realVRight = std::abs(vRight);
     

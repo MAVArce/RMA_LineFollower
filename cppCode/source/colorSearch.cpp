@@ -92,7 +92,7 @@ void ColorSearch::_calibrateRed(){
 
 void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
     float originalAngle = GetRobotDirection();
-    // RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
+    RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
     
     cv::Mat imageOriginal = _visionCtrl->getImageFrontal();
     cv::Mat imageNew = _visionCtrl->getImageFrontal();
@@ -104,8 +104,8 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
 
     FindLandmark(pt, dist);
 
-    RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
-    // RotateToAngle(originalAngle, actuator);
+    // RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
+    RotateToAngle(originalAngle, actuator);
 }
 
 void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){

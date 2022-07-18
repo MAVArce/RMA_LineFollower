@@ -31,6 +31,10 @@ void Control::updateVelocities(float error, float &vLeft, float &vRight, float d
     float controlTerms = pTerm + iTerm + dTerm;
     // std::cout << controlTerms << " = " << pTerm << " + " << iTerm << " + " << dTerm << std::endl;
 
+    if(vLeft < 0 && !_linear){
+        controlTerms *= -1;
+    }
+
     vLeft += controlTerms;
     vRight += _linear ? controlTerms : -controlTerms;
 }

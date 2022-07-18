@@ -68,6 +68,13 @@ void initialSetup(int clientID, int robotHandle, int leftMotorHandle, int rightM
         ang[0] = 0.0;
         ang[1] = 0.0;
         ang[2] = -80 * M_PI / 180;
+    } else if(scene == 5){
+        pos[0] = 2.4805;
+        pos[1] = 1.8250;
+        pos[2] = 0.1388;
+        ang[0] = 0.0;
+        ang[1] = 0.0;
+        ang[2] = 75 * M_PI / 180;
     }
 
     simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
@@ -207,26 +214,26 @@ int main(int argc, char **argv) {
     Control lmPtCtrl(0.006f, 0.0f, 0.0f, false);
     Control lmDistCtrl(0.008f, 0.0f, 0.0f, true);
 
+    const float minDistDiff = 70;
+    const float minCenterDist = 20;
+    const float minOriDiff = 0.12;
+
     float v0 = 1.5;
     float vLeft = 0;
     float vRight = 0;
     float angle, dist;
 
-    const float minDistDiff = 70;
-    const float minCenterDist = 20;
-    const float minOriDiff = 0.12;
-
     cv::Point ptLandmark, startPtLandmark;
     int distLandmark, startDistLandmark;
 
-    modes actMode = FindStart;
+    modes actMode = FollowLine;
 
     colorSearch.Calibrate(&actuator, &startPtLandmark, &startDistLandmark);
 
     // cout << "StartPtLandmark: " << startPtLandmark.x << " - " << startPtLandmark.y << endl;
     // cout << "StartDistLandmark: " << startDistLandmark << endl;
 
-    initialSetup(clientID, robotHandle, leftMotorHandle, rightMotorHandle, 4);  
+    // initialSetup(clientID, robotHandle, leftMotorHandle, rightMotorHandle, 5);  
 
     // while (true){
     //     actuator.sendVelocities(0.4,-0.4);
@@ -310,9 +317,12 @@ int main(int argc, char **argv) {
             float oriDist = colorSearch.AngleDiff(colorSearch.oriLandmark, colorSearch.GetRobotDirection());
             float ptDist = (startPtLandmark.x - ptLandmark.x);
 
-            cout << "LmDist: " << lmDist << endl;
-            cout << "OriDist: " << oriDist << endl;
-            cout << "PtDist: " << ptDist << endl;
+            // cout << "LmDist: " << lmDist << endl;
+            // cout << "OriDist: " << oriDist << endl;
+            // cout << "PtDist: " << ptDist << endl;
+
+            // vLeft = 0;
+            // vRight = 0;
 
             if(abs(ptDist) > minCenterDist || abs(oriDist) > minOriDiff){
                 vLeft = v0;
@@ -334,11 +344,11 @@ int main(int argc, char **argv) {
                 actMode = FollowLine;
             }
 
-            std::cout << "V: (" << vLeft << ", " << vRight << ")\n";
+            // std::cout << "V: (" << vLeft << ", " << vRight << ")\n";
             cv::imshow("CameraFrontal", clone);
         }
 
-        actuator.sendVelocities(vLeft, vRight, true);
+        actuator.sendVelocities(vLeft, vRight);
 
         // cv::Mat frontalImg = visionCtrl.getImageFrontal();
         // cv::imshow("CameraFrontal", frontalImg);
