@@ -14,6 +14,7 @@ ColorSearch::ColorSearch(int clientId, int robotHandler, Vision *visionCtrl){
     _clientId = clientId;
     _robotHandler = robotHandler;
     _visionCtrl = visionCtrl;
+    oriLandmark = 0;
 }
 
 void ColorSearch::_calibrateGreen(){
@@ -98,6 +99,8 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
     cv::imwrite("calibrationImg.png", imageOriginal);
     _calibrateGreen();
     _calibrateRed();
+
+    oriLandmark = GetRobotDirection();
 
     FindLandmark(pt, dist);
 
@@ -269,23 +272,28 @@ int ColorSearch::_calculateValue(Filter *filter, int *valueToChange, int step, i
 
 float ColorSearch::GetRobotDirection(){
     simxFloat *eulerAngles = (simxFloat*)calloc(3, sizeof(simxFloat));
-    simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
+    while(eulerAngles[0] == 0){
+        simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
+        extApi_sleepMs(5);
+    }
 
-    // std::cout<< "robot direction: " << eulerAngles[0] << ", " << eulerAngles[1] << ", " << eulerAngles[2] << std::endl;
+    std::cout<< "robot direction: " << eulerAngles[0] << ", " << eulerAngles[1] << ", " << eulerAngles[2] << std::endl;
     return (float)eulerAngles[2];
 }
 
 float ColorSearch::AngleDiff(float a, float b){
-    float diff = a - b;
-    // if(diff < -M_PI){
-    //     diff += M_PI * 2;
-    // } else if(diff > M_PI){
-    //     diff -= M_PI * 2;
-    // }
-    if(diff < -M_PI)
-        diff = (diff + M_PI) * -1;
-    if(diff > M_PI)
-        diff = (diff - M_PI) * -1;
+    float diff = a - b;    
+    if(diff < -M_PI){
+        diff += M_PI * 2;
+    } else if(diff > M_PI){
+        diff -= M_PI * 2;
+    }
+
+    std::cout << "AngleDiff: " << a << " - " << b << " = " << a-b << " (" << diff << ")" << std::endl;
+    // if(diff < -M_PI)
+    //     diff = (diff + M_PI) * -1;
+    // if(diff > M_PI)
+    //     diff = (diff - M_PI) * -1;
 
     return diff;
 }

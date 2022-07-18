@@ -62,8 +62,8 @@ void initialSetup(int clientID, int robotHandle, int leftMotorHandle, int rightM
         ang[1] = 0.0;
         ang[2] = -179.60 * M_PI / 180;
     } else if(scene == 4){
-        pos[0] = 2.7055;
-        pos[1] = -0.075;
+        pos[0] = 2.72;
+        pos[1] = 0.1857;
         pos[2] = 0.1388;
         ang[0] = 0.0;
         ang[1] = 0.0;
@@ -214,12 +214,14 @@ int main(int argc, char **argv) {
 
     cv::Point ptLandmark, startPtLandmark;
     int distLandmark, startDistLandmark;
-    int startOriLandmark;
+    // int startOriLandmark;
 
     modes actMode = FindStart;
 
     colorSearch.Calibrate(&actuator, &startPtLandmark, &startDistLandmark);
-    startOriLandmark = colorSearch.GetRobotDirection();
+    // std::cout << "startOriLandmark: " << colorSearch.oriLandmark << std::endl;
+    
+    // while(true);
 
     cout << "StartPtLandmark: " << startPtLandmark.x << " - " << startPtLandmark.y << endl;
     cout << "StartDistLandmark: " << startDistLandmark << endl;
@@ -300,7 +302,7 @@ int main(int argc, char **argv) {
             vRight = v0;
 
             // float lmDist = (startDistLandmark - distLandmark);
-            float oriDist = colorSearch.AngleDiff(startOriLandmark, colorSearch.GetRobotDirection());
+            float oriDist = colorSearch.AngleDiff(colorSearch.oriLandmark, colorSearch.GetRobotDirection());
             float ptDist = (startPtLandmark.x - ptLandmark.x);
 
             // lmDistCtrl.updateVelocities(-lmDist, vLeft, vRight, dt);
@@ -314,6 +316,7 @@ int main(int argc, char **argv) {
             std::cout << std::endl;
 
             cv::imshow("CameraFrontal", clone);
+            // while(true);
         }
 
         actuator.sendVelocities(vLeft, vRight);

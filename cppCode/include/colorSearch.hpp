@@ -14,6 +14,8 @@ class ColorSearch {
         float GetRobotDirection();
         float AngleDiff(float a, float b);
 
+        float oriLandmark;
+
     private:
         struct Filter{
             bool isSplit;
