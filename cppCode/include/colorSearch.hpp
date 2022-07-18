@@ -13,6 +13,7 @@ class ColorSearch {
         void SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist);
         float GetRobotDirection();
         float AngleDiff(float a, float b);
+        void RotateToAngle(float angle, Actuator *actuator);
 
         float oriLandmark;
 
@@ -32,7 +33,6 @@ class ColorSearch {
 
         float _angleSum(float a, float b);
 
-        void _RotateToAngle(float angle, Actuator *actuator);
         int _calculateValue(Filter *filter, int *valueToChange, int step, int max, int min);        
         void _calibrateGreen();
         void _calibrateRed();

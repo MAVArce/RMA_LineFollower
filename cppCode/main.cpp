@@ -194,37 +194,37 @@ int main(int argc, char **argv) {
     cv::namedWindow("CameraFrontal", cv::WINDOW_AUTOSIZE);
     cv::Mat image;
 
-    const int maxFramesToLost = 60;
+    const int maxFramesToLost = 40;
     int framesToLost = 0;
     int last_sim_time = 0;
     int curr_sim_time = 0;
     int dt = 0;
 
     Control distCtrl(0.008f, 0.00001f, 0.003f, false);
-    Control angleCtrl(0.85f, 0.0001f, 0.2f, false);
+    Control angleCtrl(0.8f, 0.0001f, 0.15f, false);
 
-    Control lmOriCtrl(0.05f, 0.000f, 0.0f, false);
-    Control lmPtCtrl(0.005f, 0.000f, 0.0f, false);
-    Control lmDistCtrl(0.005f, 0.00f, 0.0f, true);
+    Control lmOriCtrl(2.0f, 0.0f, 0.0f, false);
+    Control lmPtCtrl(0.006f, 0.0f, 0.0f, false);
+    Control lmDistCtrl(0.008f, 0.0f, 0.0f, true);
 
     float v0 = 1.5;
     float vLeft = 0;
     float vRight = 0;
     float angle, dist;
 
+    const float minDistDiff = 70;
+    const float minCenterDist = 20;
+    const float minOriDiff = 0.12;
+
     cv::Point ptLandmark, startPtLandmark;
     int distLandmark, startDistLandmark;
-    // int startOriLandmark;
 
     modes actMode = FindStart;
 
     colorSearch.Calibrate(&actuator, &startPtLandmark, &startDistLandmark);
-    // std::cout << "startOriLandmark: " << colorSearch.oriLandmark << std::endl;
-    
-    // while(true);
 
-    cout << "StartPtLandmark: " << startPtLandmark.x << " - " << startPtLandmark.y << endl;
-    cout << "StartDistLandmark: " << startDistLandmark << endl;
+    // cout << "StartPtLandmark: " << startPtLandmark.x << " - " << startPtLandmark.y << endl;
+    // cout << "StartDistLandmark: " << startDistLandmark << endl;
 
     initialSetup(clientID, robotHandle, leftMotorHandle, rightMotorHandle, 4);  
 
@@ -285,7 +285,6 @@ int main(int argc, char **argv) {
         
         } else if(actMode == FindStart){
             colorSearch.SearchLandmarkInEnvinronment(&actuator, &ptLandmark, &distLandmark);
-            cout << ptLandmark.x << " - " << ptLandmark.y << endl;
             actMode = MoveToStart;
 
         } else if(actMode == MoveToStart){
@@ -293,31 +292,53 @@ int main(int argc, char **argv) {
             cv::Mat clone = frontalImg.clone();
             colorSearch.FindLandmark(&ptLandmark, &distLandmark, &clone);
 
+            if(ptLandmark.x == -1 || ptLandmark.y == -1){
+                if(++framesToLost > 10)
+                    actMode = FindStart;
+                
+                continue;
+            } else {
+                framesToLost = 0;
+            }
+
             if(dt == 0){
                 extApi_sleepMs(1);
                 continue;   
             }
-
-            vLeft = v0;
-            vRight = v0;
 
             float lmDist = (startDistLandmark - distLandmark);
             float oriDist = colorSearch.AngleDiff(colorSearch.oriLandmark, colorSearch.GetRobotDirection());
             float ptDist = (startPtLandmark.x - ptLandmark.x);
 
             cout << "LmDist: " << lmDist << endl;
-            lmDistCtrl.updateVelocities(-lmDist, vLeft, vRight, dt);
             cout << "OriDist: " << oriDist << endl;
-            lmOriCtrl.updateVelocities(-oriDist, vLeft, vRight, dt);
             cout << "PtDist: " << ptDist << endl;
-            lmPtCtrl.updateVelocities(-ptDist, vLeft, vRight, dt);
 
-            std::cout << "V: (" << vLeft << ", " << vRight << ")\n\n";
+            if(abs(ptDist) > minCenterDist || abs(oriDist) > minOriDiff){
+                vLeft = v0;
+                vRight = v0;
+            } else {
+                vLeft = 0;
+                vRight = 0;
+            }
 
+            if(abs(lmDist) > minDistDiff)
+                lmDistCtrl.updateVelocities(vLeft == 0 ? lmDist : lmDist / 10, vLeft, vRight, dt);
+            if(abs(oriDist) > minOriDiff)
+                lmOriCtrl.updateVelocities(oriDist, vLeft, vRight, dt);
+            if(abs(ptDist) > minCenterDist)
+                lmPtCtrl.updateVelocities(-ptDist, vLeft, vRight, dt);
+
+            if(abs(lmDist) < minDistDiff && abs(oriDist) < minOriDiff && abs(ptDist) < minCenterDist){
+                colorSearch.RotateToAngle(colorSearch.oriLandmark + M_PI, &actuator);
+                actMode = FollowLine;
+            }
+
+            std::cout << "V: (" << vLeft << ", " << vRight << ")\n";
             cv::imshow("CameraFrontal", clone);
         }
 
-        actuator.sendVelocities(vLeft, vRight);
+        actuator.sendVelocities(vLeft, vRight, true);
 
         // cv::Mat frontalImg = visionCtrl.getImageFrontal();
         // cv::imshow("CameraFrontal", frontalImg);

@@ -65,9 +65,9 @@ void ColorSearch::_calibrateRed(){
     int sminBot_high = _calculateValue(&_redFilterBot, &(_redFilterBot.satMin),  1, 255, 0);
     int sminBot_low  = _calculateValue(&_redFilterBot, &(_redFilterBot.satMin), -1, 255, 0);
     
-    _redFilterBot.hueMax = ((hmaxBot_high * 1) + (hmaxBot_low * 3)) / 4;
-    _redFilterBot.satMin = ((sminBot_high * 3) + (sminBot_low * 1)) / 4; 
-    _redFilterBot.satMax = ((smaxBot_high * 1) + (smaxBot_low * 3)) / 4;
+    _redFilterBot.hueMax = ((hmaxBot_high * 1) + (hmaxBot_low * 2)) / 3;
+    _redFilterBot.satMin = ((sminBot_high * 2) + (sminBot_low * 1)) / 3; 
+    _redFilterBot.satMax = ((smaxBot_high * 1) + (smaxBot_low * 2)) / 3;
     
     // std::cout << "hmaxBot_high: " << hmaxBot_high << ", hmaxBot_low: " << hmaxBot_low << ", smaxBot_high: " << smaxBot_high << 
     //             ", smaxBot_low: " << smaxBot_low << ", sminBot_high: " << sminBot_high << ", sminBot_low: " << sminBot_low << std::endl;
@@ -84,15 +84,15 @@ void ColorSearch::_calibrateRed(){
     // std::cout << "hminTop_high: " << hminTop_high << ", hminTop_low: " << hminTop_low << ", smaxTop_high: " << smaxTop_high << 
     //             ", smaxTop_low: " << smaxTop_low << ", sminTop_high: " << sminTop_high << ", sminTop_low: " << sminTop_low << std::endl;
     
-    _redFilterTop.hueMin = ((hminTop_high * 3) + (hminTop_low * 1)) / 4;
-    _redFilterTop.satMin = ((sminTop_high * 3) + (sminTop_low * 1)) / 4; 
-    _redFilterTop.satMax = ((smaxTop_high * 1) + (smaxTop_low * 3)) / 4;
+    _redFilterTop.hueMin = ((hminTop_high * 2) + (hminTop_low * 1)) / 3;
+    _redFilterTop.satMin = ((sminTop_high * 2) + (sminTop_low * 1)) / 3; 
+    _redFilterTop.satMax = ((smaxTop_high * 1) + (smaxTop_low * 2)) / 3;
 
 }
 
 void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
     float originalAngle = GetRobotDirection();
-    // _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
+    // RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
     
     cv::Mat imageOriginal = _visionCtrl->getImageFrontal();
     cv::Mat imageNew = _visionCtrl->getImageFrontal();
@@ -104,8 +104,8 @@ void ColorSearch::Calibrate(Actuator *actuator, cv::Point *pt, int *dist){
 
     FindLandmark(pt, dist);
 
-    _RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
-    // _RotateToAngle(originalAngle, actuator);
+    RotateToAngle(_angleSum(originalAngle,  M_PI), actuator);
+    // RotateToAngle(originalAngle, actuator);
 }
 
 void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt, int *dist){
@@ -116,7 +116,7 @@ void ColorSearch::SearchLandmarkInEnvinronment(Actuator *actuator, cv::Point *pt
     FindLandmark(pt, dist);
 
     while(angleToRotate > 0 && pt->x == -1 && pt->y == -1){
-        _RotateToAngle(nextAngle, actuator);
+        RotateToAngle(nextAngle, actuator);
         nextAngle += angleStep;
         angleToRotate -= angleStep;
 
@@ -128,11 +128,10 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     *pt = cv::Point(-1,-1);
     *dist = -1;
 
-    std::cout  << "FindLandmark" << std::endl;
     const int qtdContours = 10; 
     std::vector<std::vector<cv::Point>> greenLandmark, redLandmark;
     std::vector<std::vector<cv::Point>> greenContours = detect(_greenFilter, qtdContours);
-    std::vector<std::vector<cv::Point>> redContours = detect(_redFilterBot, _redFilterTop, qtdContours);
+    std::vector<std::vector<cv::Point>> redContours = detect(_redFilterBot, _redFilterTop, 2*qtdContours);
     
     if(greenContours.empty() || redContours.size() < 2)
         return;
@@ -147,12 +146,12 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     cv::Point redCenter1, redCenter2, middlePoint;
     
     bool foundLandmark = false;
-    for(int i = 0; i < redContours.size() && !foundLandmark; i++){        
+    for(int i = 0; i < (int)redContours.size() && !foundLandmark; i++){        
         redM1 = cv::moments(redContours[i],true);
         redCenter1 = cv::Point(redM1.m10/redM1.m00, redM1.m01/redM1.m00);
         // double areaRed1 = cv::contourArea()
         
-        for(int j = 0; j < redContours.size() && !foundLandmark; j++){
+        for(int j = 0; j < (int)redContours.size() && !foundLandmark; j++){
             if(i == j)
                 continue;
 
@@ -160,7 +159,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
             redCenter2 = cv::Point(redM2.m10/redM2.m00, redM2.m01/redM2.m00);
             middlePoint = cv::Point((redCenter1.x + redCenter2.x)/2, (redCenter1.y + redCenter2.y)/2);
 
-            for(int k = 0; k < greenContours.size() && !foundLandmark; k++){
+            for(int k = 0; k < (int)greenContours.size() && !foundLandmark; k++){
                 greenRect = cv::boundingRect(greenContours[k]);
 
                 if(middlePoint.x < greenRect.x || middlePoint.x > (greenRect.x + greenRect.width) ||
@@ -171,7 +170,7 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
             }
         }
     }
-    std::cout<< "middlePoint: " << middlePoint << ", greenRect: " << greenRect << std::endl;
+    // std::cout<< "middlePoint: " << middlePoint << ", greenRect: " << greenRect << std::endl;
     if(foundLandmark != true)
         return;
 
@@ -311,7 +310,7 @@ float ColorSearch::_angleSum(float a, float b){
     return sum;
 }
 
-void ColorSearch::_RotateToAngle(float angle, Actuator *actuator){
+void ColorSearch::RotateToAngle(float angle, Actuator *actuator){
     float error = M_PI;
     float currAngle = GetRobotDirection();
 

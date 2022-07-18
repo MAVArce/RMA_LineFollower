@@ -4,11 +4,11 @@
 class Actuator {
     public:        
         Actuator(int clientId, int leftHandler, int rightHandler);
-        void sendVelocities(float vLeft, float vRight);
+        void sendVelocities(float vLeft, float vRight, bool printVelocities = false);
         void stop();
 
     private:
-        const float _maxVel = 2.0f;
+        const float _maxVel = 3.0f;
         const float _deadZone = 0.4f;
         const float _velCoefA = 1.2f;
         const float _velCoefB = -0.1f;
