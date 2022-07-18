@@ -132,7 +132,8 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
     std::vector<std::vector<cv::Point>> greenLandmark, redLandmark;
     std::vector<std::vector<cv::Point>> greenContours = detect(_greenFilter, qtdContours);
     std::vector<std::vector<cv::Point>> redContours = detect(_redFilterBot, _redFilterTop, qtdContours);
-    if(greenContours.empty() || redContours.empty() || redContours.size() < 2)
+    
+    if(greenContours.empty() || redContours.size() < 2)
         return;
 
     if(image != nullptr){
@@ -140,27 +141,25 @@ void ColorSearch::FindLandmark(cv::Point *pt, int *dist, cv::Mat *image){
         cv::drawContours(*image, greenContours, -1, cv::Scalar(255,0,0), 2, cv::LINE_8);
     }
 
-
     cv::Rect greenRect;
     cv::Moments redM1, redM2;
     cv::Point redCenter1, redCenter2, middlePoint;
     
     bool foundLandmark = false;
-    for(int i = 0; i < qtdContours && !foundLandmark; i++){
-        for(int j = 0; j < qtdContours && !foundLandmark; j++){
+    for(int i = 0; i < redContours.size() && !foundLandmark; i++){        
+        redM1 = cv::moments(redContours[i],true);
+        redCenter1 = cv::Point(redM1.m10/redM1.m00, redM1.m01/redM1.m00);
+        
+        for(int j = 0; j < redContours.size() && !foundLandmark; j++){
             if(i == j)
                 continue;
 
-            for(int k = 0; k < qtdContours && !foundLandmark; k++){
+            redM2 = cv::moments(redContours[j],true);
+            redCenter2 = cv::Point(redM2.m10/redM2.m00, redM2.m01/redM2.m00);
+            middlePoint = cv::Point((redCenter1.x + redCenter2.x)/2, (redCenter1.y + redCenter2.y)/2);
 
+            for(int k = 0; k < greenContours.size() && !foundLandmark; k++){
                 greenRect = cv::boundingRect(greenContours[k]);
-
-                redM1 = cv::moments(redContours[i],true);
-                redM2 = cv::moments(redContours[j],true);
-                redCenter1 = cv::Point(redM1.m10/redM1.m00, redM1.m01/redM1.m00);
-                redCenter2 = cv::Point(redM2.m10/redM2.m00, redM2.m01/redM2.m00);
-
-                middlePoint = cv::Point((redCenter1.x + redCenter2.x)/2, (redCenter1.y + redCenter2.y)/2);
 
                 if(middlePoint.x < greenRect.x || middlePoint.x > (greenRect.x + greenRect.width) ||
                     middlePoint.y < greenRect.y || middlePoint.y > (greenRect.y + greenRect.height))
@@ -206,6 +205,8 @@ std::vector<std::vector<cv::Point>> ColorSearch::detect(Filter filter, int qtd){
     cv::Mat filterRes;
     cv::Mat image = _visionCtrl->getImageFrontal();
     cvtColor(image, image, cv::COLOR_BGR2HSV);        
+
+    
 
     cv::inRange(image, cv::Scalar(filter.hueMin, filter.satMin, filter.valMin), 
                 cv::Scalar(filter.hueMax, filter.satMax, filter.valMax), filterRes);
@@ -276,8 +277,6 @@ float ColorSearch::GetRobotDirection(){
         simxGetObjectOrientation(_clientId, _robotHandler, -1, eulerAngles, simx_opmode_streaming);
         extApi_sleepMs(5);
     }
-
-    std::cout<< "robot direction: " << eulerAngles[0] << ", " << eulerAngles[1] << ", " << eulerAngles[2] << std::endl;
     return (float)eulerAngles[2];
 }
 
@@ -288,12 +287,6 @@ float ColorSearch::AngleDiff(float a, float b){
     } else if(diff > M_PI){
         diff -= M_PI * 2;
     }
-
-    std::cout << "AngleDiff: " << a << " - " << b << " = " << a-b << " (" << diff << ")" << std::endl;
-    // if(diff < -M_PI)
-    //     diff = (diff + M_PI) * -1;
-    // if(diff > M_PI)
-    //     diff = (diff - M_PI) * -1;
 
     return diff;
 }
@@ -311,16 +304,12 @@ float ColorSearch::_angleSum(float a, float b){
 void ColorSearch::_RotateToAngle(float angle, Actuator *actuator){
     float error = M_PI;
     float currAngle = GetRobotDirection();
-    // std::cout <<"Angle: " << angle << std::endl;
 
     while(abs(error) > 0.05){        
         currAngle = GetRobotDirection();
-        // std::cout <<"CurrAngle: " << currAngle << std::endl;
         error = AngleDiff(currAngle, angle);
 
-        // std::cout<< "robot direction: " << currAngle << ", error: " << error << std::endl;
         float vel = (error)*0.6 + (error > 0 ? 0.4 : -0.4);
-        // std::cout << "vel: " << vel << " - error: " << error << std::endl;
 
         actuator->sendVelocities(vel, -vel);
 
