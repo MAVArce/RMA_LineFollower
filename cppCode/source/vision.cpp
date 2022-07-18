@@ -115,7 +115,7 @@ void Vision::_getCamResolution(camInfo *cam){
 }
 
 void Vision::_applyNoise(camInfo cam, cv::Mat *image){
-    return;
+    // return;
     cv::randu(cam.smallNoise, 0, 255);
     cv::randu(cam.biggerNoise, 0, 255);
     cv::resize(cam.biggerNoise, cam.biggerNoiseResized, cv::Size(), _resizeFactor, _resizeFactor, cv::INTER_NEAREST);
