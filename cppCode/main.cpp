@@ -47,35 +47,28 @@ void initialSetup(int clientID, int robotHandle, int leftMotorHandle, int rightM
         ang[0] = 0.0;
         ang[1] = 0.0;
         ang[2] = 0.0;
-    } else if(scene == 2){
-        pos[0] = 14.8305;
-        pos[1] = 0.725;
-        pos[2] = 0.1388;
-        ang[0] = 0.0;
-        ang[1] = 0.0;
-        ang[2] = 55.0 * M_PI / 180;
-    } else if(scene == 3){
-        pos[0] = -1.613;
-        pos[1] =  1.016;
-        pos[2] = 0.1388;
-        ang[0] = 0.0;
-        ang[1] = 0.0;
-        ang[2] = -179.60 * M_PI / 180;
-    } else if(scene == 4){
-        pos[0] = 2.72;
-        pos[1] = 0.1857;
-        pos[2] = 0.1388;
-        ang[0] = 0.0;
-        ang[1] = 0.0;
-        ang[2] = -80 * M_PI / 180;
-    } else if(scene == 5){
-        pos[0] = 2.4805;
-        pos[1] = 1.8250;
-        pos[2] = 0.1388;
-        ang[0] = 0.0;
-        ang[1] = 0.0;
-        ang[2] = 75 * M_PI / 180;
-    }
+    } //else if(scene == 2){
+    //     pos[0] = -1.613;
+    //     pos[1] =  1.016;
+    //     pos[2] = 0.1388;
+    //     ang[0] = 0.0;
+    //     ang[1] = 0.0;
+    //     ang[2] = -179.60 * M_PI / 180;
+    // } else if(scene == 3){
+    //     pos[0] = 2.72;
+    //     pos[1] = 0.1857;
+    //     pos[2] = 0.1388;
+    //     ang[0] = 0.0;
+    //     ang[1] = 0.0;
+    //     ang[2] = -80 * M_PI / 180;
+    // } else if(scene == 4){
+    //     pos[0] = 2.4805;
+    //     pos[1] = 1.8250;
+    //     pos[2] = 0.1388;
+    //     ang[0] = 0.0;
+    //     ang[1] = 0.0;
+    //     ang[2] = 75 * M_PI / 180;
+    // }
 
     simxSetObjectPosition(clientID, robotHandle, -1, pos, (simxInt)simx_opmode_oneshot);
     simxSetObjectOrientation(clientID, robotHandle, -1, ang, (simxInt)simx_opmode_oneshot);
@@ -158,17 +151,17 @@ int main(int argc, char **argv) {
         MoveToStart
     };
 
-    if(argc > 2){
-        try{
-            scene = stoi(string(argv[2]));
-
-            if(scene != 2 && scene != 3 && scene != 4){
-                scene = 1;
-            }
-        } catch(exception &err){
-            cout << "Escreva uma cena válida (1 ou 2).\nConsiderando cena padrão" << endl;
-        }
-    }
+    // if(argc > 2){
+    //     try{
+    //         scene = stoi(string(argv[2]));
+            
+    //         if(scene != 2 && scene != 3 && scene != 4){
+    //             scene = 1;
+    //         }
+    //     } catch(exception &err){
+    //         cout << "Escreva uma cena válida (1 ou 2).\nConsiderando cena padrão" << endl;
+    //     }
+    // }
 
     if(argc > 1) {
         char *ip = argv[1];
